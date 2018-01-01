@@ -1,0 +1,56 @@
+import cv2
+import numpy as np
+import picamera
+import time
+
+def find_yellow(image):    #returns only the red colors in the frame
+    hsv_roi =  cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask= cv2.inRange(hsv_roi, np.array([20,150,150]), np.array([30,255,255]))
+    #ycr_roi=cv2.cvtColor(image,cv2.COLOR_BGR2YCrCb)
+    #mask_2=cv2.inRange(ycr_roi, np.array((0.,165.,165.)), np.array((255.,255.,255.)))
+    #mask =cv2.bitwise_or(mask_1,mask_2)
+    kern_dilate = np.ones((8,8),np.uint8)
+    kern_erode  = np.ones((3,3),np.uint8)
+    mask= cv2.erode(mask,kern_erode)      #Eroding
+    mask=cv2.dilate(mask,kern_dilate)     #Dilating
+    return mask
+
+def contourDetect(gray):
+    
+    #gray=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+    gray=cv2.GaussianBlur(gray,(9,9),0)
+    edge=cv2.Canny(gray,20,120)
+    edge=cv2.dilate(edge,None,iterations=1)
+    edge=cv2.erode(edge,None,iterations=1)
+    (_, contours, _) = cv2.findContours(edge.copy(), mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
+    for c in contours:
+        #c=max(contours,cv2.contourArea)
+        found=cv2.minAreaRect(c)
+        box=np.int0(cv2.boxPoints(found))
+        cv2.drawContours(gray, [box], -1, (255, 255, 255),1)
+    return gray
+
+def find_trash(image):
+    hsv_roi =  cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    mask= cv2.inRange(hsv_roi, np.array([150,150,150]), np.array([170,255,255]))
+    #ycr_roi=cv2.cvtColor(image,cv2.COLOR_BGR2YCrCb)
+    #mask_2=cv2.inRange(ycr_roi, np.array((0.,165.,165.)), np.array((255.,255.,255.)))
+    #mask =cv2.bitwise_or(mask_1,mask_2)
+    kern_dilate = np.ones((8,8),np.uint8)
+    kern_erode  = np.ones((3,3),np.uint8)
+    mask= cv2.erode(mask,kern_erode)      #Eroding
+    mask=cv2.dilate(mask,kern_dilate)     #Dilating
+    return mask
+    
+
+camera=picamera.PiCamera()
+camera.resolution=(480,720)
+camera.framerate=24
+time.sleep(3)
+camera.capture('image.jpg')
+image=cv2.imread('image.jpg')
+mask=find_yellow(image)
+im=contourDetect(mask)
+cv2.imshow('image',im)
+cv2.waitKey(0)
+
